@@ -18,9 +18,41 @@ insbesondere auch für **AMD Radeon RX 6700 / RDNA2** ausgelegt.
 - Unraid XML Template
 - Docker Compose
 - automatischer GitHub-Actions-Build nach GHCR
+- Installationsskript für Unraid
 - deutsche Locale und `Europe/Berlin` als Defaults
 
 ## Schnellinstallation auf Unraid
+
+### Installationsskript (empfohlen)
+
+Auf dem Unraid-Terminal:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/h3xx3r/handbrake-amd-unraid/main/scripts/install-unraid.sh \
+  -o /tmp/install-handbrake-amd.sh
+bash /tmp/install-handbrake-amd.sh
+```
+
+Das Skript prüft Docker und `/dev/dri`, erkennt standardmäßig `renderD128`,
+lädt das fertige GHCR-Image, legt die persistenten Verzeichnisse an und
+startet den Container mit den passenden AMD-VAAPI-Defaults.
+
+Eigene Pfade oder Ports können direkt als Umgebungsvariablen gesetzt werden:
+
+```bash
+OUTPUT_PATH=/mnt/user/Filme/HandBrake \
+WEB_PORT=5801 \
+VNC_PASSWORD='mein-passwort' \
+bash /tmp/install-handbrake-amd.sh
+```
+
+Nach erfolgreicher Installation ist die GUI standardmäßig erreichbar unter:
+
+```text
+http://UNRAID-IP:5800
+```
+
+### Manuelle Installation
 
 Nach dem ersten erfolgreichen GHCR-Build lautet das Image:
 
@@ -39,12 +71,6 @@ Standardwerte für AMD:
 ```text
 LIBVA_DRIVER_NAME=radeonsi
 VAAPI_DEVICE=/dev/dri/renderD128
-```
-
-Web-GUI:
-
-```text
-http://UNRAID-IP:5800
 ```
 
 Die vollständige Schritt-für-Schritt-Anleitung steht unter:
@@ -84,6 +110,38 @@ Empfehlung:
 - H.264 VAAPI: maximale Abspiel-Kompatibilität
 - H.265/HEVC VAAPI: bessere Kompression
 - H.265 10-bit: verwenden, wenn im aktuellen Build angeboten
+
+## Installationsskript konfigurieren
+
+Das Skript `scripts/install-unraid.sh` unterstützt unter anderem:
+
+```text
+IMAGE            ghcr.io/h3xx3r/handbrake-amd-unraid:latest
+CONTAINER_NAME   HandBrake-AMD-GUI
+CONFIG_PATH      /mnt/user/appdata/handbrake-amd
+STORAGE_PATH     /mnt/user
+OUTPUT_PATH      /mnt/user/Media/HandBrake
+WATCH_PATH       /mnt/user/Media/HandBrake/watch
+WEB_PORT         5800
+VNC_PORT         5900
+VAAPI_DEVICE     automatisch /dev/dri/renderD128
+LIBVA_DRIVER_NAME radeonsi
+VNC_PASSWORD     leer
+TZ               Europe/Berlin
+USER_ID          99
+GROUP_ID         100
+UMASK            0022
+```
+
+Beispiel bei einer zweiten GPU:
+
+```bash
+VAAPI_DEVICE=/dev/dri/renderD129 bash /tmp/install-handbrake-amd.sh
+```
+
+Das Skript kann erneut ausgeführt werden, um den vorhandenen Container durch
+das aktuell gepullte Image zu ersetzen. Die Daten unter `/config` und den
+gemounteten Medienpfaden bleiben erhalten.
 
 ## Image lokal bauen
 

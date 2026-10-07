@@ -22,6 +22,100 @@ renderD128
 
 Bei mehreren GPUs kann die Radeon z. B. `renderD129` sein.
 
+## Automatische Installation per Script
+
+Empfohlen ist das mitgelieferte Script `scripts/install-unraid.sh`.
+
+Auf dem Unraid-Terminal:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/h3xx3r/handbrake-amd-unraid/main/scripts/install-unraid.sh \
+  -o /tmp/install-handbrake-amd.sh
+bash /tmp/install-handbrake-amd.sh
+```
+
+Das Script erledigt automatisch:
+
+- Prüfung, ob Docker läuft
+- Prüfung von `/dev/dri`
+- automatische Auswahl von `/dev/dri/renderD128`, sofern vorhanden
+- Download von `ghcr.io/h3xx3r/handbrake-amd-unraid:latest`
+- Anlage der persistenten Verzeichnisse
+- Ersetzen eines bereits vorhandenen Containers gleichen Namens
+- Start mit `radeonsi`, VA-API und Unraid-kompatiblen UID/GID-Defaults
+- Ausgabe der Web-GUI- und VNC-Adresse
+
+Standardwerte:
+
+```text
+CONTAINER_NAME   HandBrake-AMD-GUI
+CONFIG_PATH      /mnt/user/appdata/handbrake-amd
+STORAGE_PATH     /mnt/user
+OUTPUT_PATH      /mnt/user/Media/HandBrake
+WATCH_PATH       /mnt/user/Media/HandBrake/watch
+WEB_PORT         5800
+VNC_PORT         5900
+LIBVA_DRIVER_NAME radeonsi
+VAAPI_DEVICE     automatisch /dev/dri/renderD128
+TZ               Europe/Berlin
+USER_ID          99
+GROUP_ID         100
+UMASK            0022
+```
+
+### Andere Medienpfade verwenden
+
+```bash
+OUTPUT_PATH=/mnt/user/Filme/HandBrake \
+WATCH_PATH=/mnt/user/Filme/HandBrake/watch \
+bash /tmp/install-handbrake-amd.sh
+```
+
+### Anderen Web-Port verwenden
+
+```bash
+WEB_PORT=5801 bash /tmp/install-handbrake-amd.sh
+```
+
+Danach lautet die Web-GUI entsprechend:
+
+```text
+http://UNRAID-IP:5801
+```
+
+### VNC-Passwort setzen
+
+```bash
+VNC_PASSWORD='mein-passwort' bash /tmp/install-handbrake-amd.sh
+```
+
+### Zweiten Render-Node verwenden
+
+Wenn die RX 6700 beispielsweise `renderD129` ist:
+
+```bash
+VAAPI_DEVICE=/dev/dri/renderD129 bash /tmp/install-handbrake-amd.sh
+```
+
+### Container aktualisieren
+
+Das Installationsscript kann später erneut ausgeführt werden. Es zieht zuerst
+das aktuelle `latest`-Image und ersetzt danach den bestehenden Container.
+Die Daten unter `/config`, `/output`, `/watch` und `/storage` bleiben erhalten,
+weil sie auf dem Unraid-Host liegen.
+
+```bash
+bash /tmp/install-handbrake-amd.sh
+```
+
+Falls die temporäre Datei nicht mehr vorhanden ist:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/h3xx3r/handbrake-amd-unraid/main/scripts/install-unraid.sh \
+  -o /tmp/install-handbrake-amd.sh
+bash /tmp/install-handbrake-amd.sh
+```
+
 ## Installation über die Unraid Docker-GUI
 
 1. Docker öffnen.
@@ -120,3 +214,6 @@ Nach dem ersten erfolgreichen GitHub-Actions-Build:
 5. `Change visibility` -> `Public`.
 
 Danach kann Unraid das Image ohne GitHub-Login herunterladen.
+
+Wenn das Paket noch privat ist, schlägt das Installationsscript beim
+`docker pull` fehl und weist auf diesen Schritt hin.
