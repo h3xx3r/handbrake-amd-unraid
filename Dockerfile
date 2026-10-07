@@ -5,7 +5,7 @@
 ARG GUI_BASE=jlesage/baseimage-gui:ubuntu-24.04-v4
 FROM ${GUI_BASE}
 
-USER root
+USER 0:0
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG HANDBRAKE_REF=master
