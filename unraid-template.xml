@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>HandBrake-AMD-GUI</Name>
+  <Repository>ghcr.io/h3xx3r/handbrake-amd-unraid:latest</Repository>
+  <Registry>https://ghcr.io/</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/h3xx3r/handbrake-amd-unraid/issues</Support>
+  <Project>https://github.com/h3xx3r/handbrake-amd-unraid</Project>
+  <Overview>HandBrake GTK GUI im Browser/VNC mit AMD GPU Hardware-Encoding über Mesa VA-API. Für Unraid 7.x. AMD Mesa VA-API, RX-6700/RDNA2 geeignet. Fertiges Image über GitHub Container Registry.</Overview>
+  <Category>MediaApp:Video</Category>
+  <WebUI>http://[IP]:[PORT:5800]/</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/h3xx3r/handbrake-amd-unraid/main/unraid-template.xml</TemplateURL>
+  <Icon>https://handbrake.fr/img/logo.png</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+
+  <Config Name="Web GUI" Target="5800" Default="5800" Mode="tcp" Description="Browser GUI / noVNC" Type="Port" Display="always" Required="true" Mask="false">5800</Config>
+  <Config Name="VNC" Target="5900" Default="5900" Mode="tcp" Description="Direkter VNC-Port" Type="Port" Display="advanced" Required="false" Mask="false">5900</Config>
+
+  <Config Name="AMD GPU" Target="/dev/dri" Default="/dev/dri" Mode="" Description="AMD DRM/VA-API Gerät" Type="Device" Display="always" Required="true" Mask="false">/dev/dri</Config>
+
+  <Config Name="Config" Target="/config" Default="/mnt/user/appdata/handbrake-amd" Mode="rw" Description="Persistente HandBrake Einstellungen" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/handbrake-amd</Config>
+  <Config Name="Storage" Target="/storage" Default="/mnt/user" Mode="rw" Description="Quellmedien" Type="Path" Display="always" Required="true" Mask="false">/mnt/user</Config>
+  <Config Name="Output" Target="/output" Default="/mnt/user/Media/HandBrake" Mode="rw" Description="Ausgabeordner" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/Media/HandBrake</Config>
+  <Config Name="Watch" Target="/watch" Default="/mnt/user/Media/HandBrake/watch" Mode="rw" Description="Optionaler Watch-Ordner" Type="Path" Display="advanced" Required="false" Mask="false">/mnt/user/Media/HandBrake/watch</Config>
+
+  <Config Name="Timezone" Target="TZ" Default="Europe/Berlin" Mode="" Description="Zeitzone" Type="Variable" Display="always" Required="true" Mask="false">Europe/Berlin</Config>
+  <Config Name="Language" Target="LANG" Default="de_DE.UTF-8" Mode="" Description="GUI Sprache/Locale" Type="Variable" Display="advanced" Required="false" Mask="false">de_DE.UTF-8</Config>
+  <Config Name="User ID" Target="USER_ID" Default="99" Mode="" Description="Unraid nobody UID" Type="Variable" Display="advanced" Required="true" Mask="false">99</Config>
+  <Config Name="Group ID" Target="GROUP_ID" Default="100" Mode="" Description="Unraid users GID" Type="Variable" Display="advanced" Required="true" Mask="false">100</Config>
+  <Config Name="UMASK" Target="UMASK" Default="0022" Mode="" Description="Dateirechte" Type="Variable" Display="advanced" Required="false" Mask="false">0022</Config>
+
+  <Config Name="VAAPI Driver" Target="LIBVA_DRIVER_NAME" Default="radeonsi" Mode="" Description="Mesa AMD VA-API Treiber" Type="Variable" Display="always" Required="true" Mask="false">radeonsi</Config>
+  <Config Name="VAAPI Device" Target="VAAPI_DEVICE" Default="/dev/dri/renderD128" Mode="" Description="Render-Node der AMD GPU" Type="Variable" Display="always" Required="true" Mask="false">/dev/dri/renderD128</Config>
+
+  <Config Name="VNC Password" Target="VNC_PASSWORD" Default="" Mode="" Description="Optionales VNC/Browser Passwort" Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="Display Width" Target="DISPLAY_WIDTH" Default="1920" Mode="" Description="Breite der Browser/VNC-GUI" Type="Variable" Display="advanced" Required="false" Mask="false">1920</Config>
+  <Config Name="Display Height" Target="DISPLAY_HEIGHT" Default="1080" Mode="" Description="Hoehe der Browser/VNC-GUI" Type="Variable" Display="advanced" Required="false" Mask="false">1080</Config>
+  <Config Name="Keep GUI Running" Target="KEEP_APP_RUNNING" Default="1" Mode="" Description="GUI bei Schließen erneut starten" Type="Variable" Display="advanced" Required="false" Mask="false">1</Config>
+</Container>

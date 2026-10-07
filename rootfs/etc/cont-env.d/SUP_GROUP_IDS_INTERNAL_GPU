@@ -1,0 +1,26 @@
+#!/bin/sh
+# Automatically add the numeric groups owning /dev/dri devices
+# to the jlesage "app" user. This avoids hard-coding Unraid video/render GIDs.
+if [ ! -d /dev/dri ]; then
+    exit 100
+fi
+
+gids=""
+for dev in /dev/dri/*; do
+    [ -e "$dev" ] || continue
+    gid="$(stat -c '%g' "$dev" 2>/dev/null || true)"
+    [ -n "$gid" ] || continue
+    case ",$gids," in
+        *,"$gid",*) ;;
+        *)
+            if [ -n "$gids" ]; then
+                gids="$gids,$gid"
+            else
+                gids="$gid"
+            fi
+            ;;
+    esac
+done
+
+[ -n "$gids" ] || exit 100
+printf '%s\n' "$gids"
