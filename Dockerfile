@@ -132,8 +132,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xvfb \
     && locale-gen de_DE.UTF-8 en_US.UTF-8 \
     && ln -sf /usr/share/novnc/vnc.html /usr/share/novnc/index.html \
-    && groupadd --gid 1000 app \
-    && useradd --uid 1000 --gid 1000 --create-home --shell /bin/bash app \
+    && groupadd --system app \
+    && useradd --system --gid app --home-dir /home/app --create-home --shell /bin/bash app \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /opt/handbrake /opt/handbrake
