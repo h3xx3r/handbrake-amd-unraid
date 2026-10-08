@@ -11,9 +11,9 @@ HandBrake mit GTK-Oberfläche im Browser/VNC, AMD-GPU-Hardware-Encoding über Me
 - automatische `/dev/dri`-Gruppenrechte
 - persistente Konfiguration unter `/config`
 - automatischer Watch-Folder mit nur einem Encode gleichzeitig
+- Standardmodus übernimmt das in der HandBrake-GUI als **Standard** markierte Preset
 - Erfolg nach `/watch/done`, Fehler nach `/watch/error`
 - Ausgabe nach `/output`
-- RX-6700-Standardprofil: **H.265/HEVC VAAPI Main10**, Qualität `24`
 - Unraid XML Template und editierbare DockerMan-Konfiguration
 - Docker Compose
 - GitHub Actions -> GHCR
@@ -51,22 +51,48 @@ Standardmäßig ist der Watcher aktiviert. Lege eine Videodatei direkt in:
 
 Der Container wartet, bis sich die Dateigröße nicht mehr ändert, und startet dann automatisch HandBrakeCLI. Es läuft immer nur **eine Datei gleichzeitig**.
 
-Standardprofil:
+### Standard: dein HandBrake-GUI-Preset
+
+Der Default ist jetzt:
 
 ```text
-WATCH_PROFILE=rx6700-hevc10
-WATCH_QUALITY=24
+WATCH_PROFILE=gui-default
 ```
 
-Das verwendet `vaapi_hevc` mit HEVC Main10 auf der RX 6700. Nach Erfolg wird die Quelle nach `watch/done` verschoben; bei einem Fehler nach `watch/error`. Die fertige MKV-Datei landet unter `/output`.
+Dabei sucht der Watcher die von der GTK-GUI gespeicherte `presets.json` unter `/config` und verwendet das Preset, das in HandBrake als **Standard** markiert ist. HandBrakeCLI importiert diese Preset-Datei und verwendet den exakten Preset-Namen.
 
-Unterstützte Profile:
+Dadurch werden insbesondere übernommen:
+
+- Videoencoder und VA-API-Einstellungen
+- Qualitäts-/Bitrateneinstellungen
+- Audioeinstellungen
+- Untertiteleinstellungen
+- Filter
+- Auflösung/Framerate
+- Ausgabecontainer
+
+Der Watcher überschreibt diese Werte im `gui-default`-Modus nicht mehr mit eigenen CLI-Optionen.
+
+Nach Erfolg wird die Quelle nach `watch/done` verschoben; bei einem echten Encode-Fehler nach `watch/error`. Die fertige Datei landet unter `/output` und erhält die zum Preset passende Endung (`.mp4`, `.mkv` oder `.webm`).
+
+### Bestimmtes eigenes GUI-Preset verwenden
 
 ```text
-rx6700-hevc10    H.265/HEVC VAAPI Main10 (Standard)
-rx6700-hevc      H.265/HEVC VAAPI Main
-rx6700-h264      H.264 VAAPI High
-handbrake-preset eingebautes HandBrake-Preset verwenden
+WATCH_PROFILE=gui-preset
+WATCH_HANDBRAKE_PRESET=Mein Presetname
+```
+
+Der Name muss exakt dem Preset-Namen in der HandBrake-GUI entsprechen.
+
+### Weitere Profile
+
+```text
+gui-default       als Standard markiertes eigenes GUI-Preset (empfohlen)
+gui-preset        eigenes GUI-Preset über WATCH_HANDBRAKE_PRESET
+handbrake-preset  eingebautes HandBrake-Preset
+rx6700-hevc10     manuell H.265 VAAPI Main10 (experimentell)
+rx6700-hevc       manuell H.265 VAAPI Main
+rx6700-h264       manuell H.264 VAAPI High
 ```
 
 Für ein eingebautes HandBrake-Preset:
@@ -92,6 +118,7 @@ LIBVA_DRIVER_NAME  radeonsi
 VAAPI_DEVICE       /dev/dri/renderD128
 WebUI Host-Port    5800
 VNC Host-Port      5901
+WATCH_PROFILE      gui-default
 ```
 
 Bei einer zweiten GPU kann `VAAPI_DEVICE` z. B. `/dev/dri/renderD129` sein.
@@ -103,7 +130,7 @@ Beispiel:
 ```bash
 OUTPUT_PATH=/mnt/user/Filme/HandBrake \
 WATCH_PATH=/mnt/user/Filme/HandBrake/watch \
-WATCH_PROFILE=rx6700-h264 \
+WATCH_PROFILE=gui-default \
 VNC_PORT=5902 \
 bash /tmp/install-handbrake-amd.sh
 ```
@@ -117,26 +144,19 @@ docker exec -it HandBrake-AMD-GUI sh -lc \
   'vainfo --display drm --device "$VAAPI_DEVICE"'
 ```
 
-HandBrake VA-API prüfen:
-
-```bash
-docker exec -it HandBrake-AMD-GUI sh -lc \
-  'HandBrakeCLI --help | grep -i -E "vaapi|va-api"'
-```
-
 ## RX 6700
 
 Die RX 6700 kann über Mesa/VA-API H.264 und HEVC/H.265 hardwarebeschleunigt encodieren. AV1 wird von dieser Generation hardwarebeschleunigt decodiert, aber nicht encodiert.
 
 ## HandBrake-Zweig
 
-Die aktuelle stabile HandBrake-Version ist 1.11.2. Der native VA-API-Pfad befindet sich im Entwicklungszweig; deshalb baut dieses Image standardmäßig `master` mit:
+Das Image baut standardmäßig den HandBrake-Entwicklungszweig `master` mit:
 
 ```text
 --enable-vaapi
 ```
 
-Der Host stellt nur `/dev/dri` bereit; Mesa/libva liegen im Container.
+Der Host stellt `/dev/dri` bereit; Mesa/libva liegen im Container.
 
 ## Dokumentation
 
