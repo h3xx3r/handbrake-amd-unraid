@@ -48,9 +48,9 @@ VNC_PORT                5901
 LIBVA_DRIVER_NAME       radeonsi
 VAAPI_DEVICE            automatisch /dev/dri/renderD128
 WATCH_ENABLED           1
-WATCH_PROFILE           rx6700-hevc10
+WATCH_PROFILE           gui-default
 WATCH_QUALITY           24
-WATCH_HANDBRAKE_PRESET  Fast 1080p30
+WATCH_HANDBRAKE_PRESET  leer
 WATCH_POLL_SECONDS      5
 WATCH_SETTLE_SECONDS    3
 TZ                      Europe/Berlin
@@ -71,26 +71,54 @@ Standardablauf:
 
 1. Datei wird erkannt.
 2. Der Watcher wartet, bis die Dateigröße stabil ist.
-3. HandBrakeCLI encodiert mit dem gewählten Watch-Profil.
-4. Ausgabe wird als MKV nach `/output` geschrieben.
-5. Erfolgreiche Quelle -> `/watch/done`.
-6. Fehlgeschlagene Quelle -> `/watch/error`.
+3. Der Watcher liest das in HandBrake als Standard markierte GUI-Preset aus `presets.json`.
+4. HandBrakeCLI importiert genau diese Preset-Datei und verwendet den gespeicherten Preset-Namen.
+5. Die fertige Datei wird nach `/output` geschrieben.
+6. Erfolgreiche Quelle -> `/watch/done`.
+7. Fehlgeschlagene Quelle -> `/watch/error`.
 
 Es wird immer nur **ein automatischer Job gleichzeitig** verarbeitet.
 
-### Watch-Profile
+### Empfohlen: GUI-Standardpreset
 
 ```text
-rx6700-hevc10   vaapi_hevc + Main10 + WATCH_QUALITY (Standard)
-rx6700-hevc     vaapi_hevc + Main + WATCH_QUALITY
-rx6700-h264     vaapi_h264 + High + WATCH_QUALITY
-handbrake-preset eingebautes HandBrake-Preset
+WATCH_PROFILE=gui-default
 ```
 
-Beispiel H.264:
+HandBrake GTK speichert eigene Presets unter dem persistenten `/config`-Pfad. Der Watcher sucht automatisch nach `ghb/presets.json` und nimmt das Preset mit der `Default`-Markierung.
+
+Damit übernimmt der Watcher die Einstellungen, die bereits in der GUI funktionieren, einschließlich:
+
+- VA-API-Encoder
+- Videoqualität oder Bitrate
+- Profil/Level
+- Audio
+- Untertitel
+- Filter
+- Framerate und Auflösung
+- MP4/MKV/WebM-Ausgabecontainer
+
+Im Modus `gui-default` werden diese Werte nicht durch zusätzliche Watcher-Optionen überschrieben.
+
+### Bestimmtes eigenes GUI-Preset
 
 ```bash
-WATCH_PROFILE=rx6700-h264 bash /tmp/install-handbrake-amd.sh
+WATCH_PROFILE=gui-preset \
+WATCH_HANDBRAKE_PRESET='Mein Preset' \
+bash /tmp/install-handbrake-amd.sh
+```
+
+Der Preset-Name muss exakt der Bezeichnung in der HandBrake-GUI entsprechen.
+
+### Weitere Watch-Profile
+
+```text
+gui-default        Standard-Preset der HandBrake-GUI (empfohlen)
+gui-preset         benanntes eigenes GUI-Preset
+handbrake-preset   eingebautes HandBrake-Preset
+rx6700-hevc10      manuell vaapi_hevc + Main10 (experimentell)
+rx6700-hevc        manuell vaapi_hevc + Main
+rx6700-h264        manuell vaapi_h264 + High
 ```
 
 Beispiel eingebautes HandBrake-Preset:
@@ -143,7 +171,7 @@ curl -fsSL https://raw.githubusercontent.com/h3xx3r/handbrake-amd-unraid/main/sc
 bash /tmp/install-handbrake-amd.sh
 ```
 
-Persistente Daten bleiben auf dem Host erhalten.
+Persistente Daten und die in der HandBrake-GUI gespeicherten Presets bleiben unter `/config` erhalten.
 
 ## Installation über die Unraid Docker-GUI
 
@@ -155,6 +183,12 @@ Das Repository enthält `unraid-template.xml`. Wichtige Zuordnungen:
 /storage  -> /mnt/user
 /output   -> /mnt/user/Media/HandBrake
 /watch    -> /mnt/user/Media/HandBrake/watch
+```
+
+Für den Watcher sollte stehen:
+
+```text
+WATCH_PROFILE = gui-default
 ```
 
 Web-GUI:
@@ -170,13 +204,6 @@ Direktes VNC standardmäßig auf Host-Port `5901`.
 ```bash
 docker exec -it HandBrake-AMD-GUI sh -lc \
   'vainfo --display drm --device "$VAAPI_DEVICE"'
-```
-
-HandBrake prüfen:
-
-```bash
-docker exec -it HandBrake-AMD-GUI sh -lc \
-  'HandBrakeCLI --version && HandBrakeCLI --help | grep -i -E "vaapi|va-api"'
 ```
 
 Für die RX 6700 sind H.264 und HEVC/H.265 die relevanten Hardware-Encoder; AV1-Hardware-Encoding gehört nicht zu RDNA2.
