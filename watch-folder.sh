@@ -99,6 +99,8 @@ format_to_extension() {
 }
 
 resolve_gui_preset() {
+    local selected_file filtered_file
+
     PRESET_FILE="$(find_gui_preset_file || true)"
     if [[ -z "$PRESET_FILE" ]]; then
         log "Kein HandBrake-GUI-Preset gefunden. Erwartet wird normalerweise /config/xdg/config/ghb/presets.json"
@@ -110,40 +112,86 @@ resolve_gui_preset() {
         return 1
     fi
 
+    selected_file="$WORK_DIR/.selected-preset.$$.${RANDOM}.json"
+    filtered_file="$WORK_DIR/.watch-preset.$$.${RANDOM}.json"
+
     case "$WATCH_PROFILE" in
         gui-default)
-            PRESET_NAME="$(jq -r '.. | objects | select(((.Folder? // false) == false) and (.Default? == true)) | .PresetName? // empty' "$PRESET_FILE" | head -n 1)"
-            if [[ -z "$PRESET_NAME" ]]; then
-                PRESET_NAME="$(jq -r '.. | objects | select(((.Folder? // false) == false) and (.PresetName? != null) and ((.Type? // 0) != 0)) | .PresetName' "$PRESET_FILE" | head -n 1)"
-                [[ -n "$PRESET_NAME" ]] && log "Kein Default-Marker gefunden; verwende erstes eigenes Preset: $PRESET_NAME"
-            fi
+            jq '
+                [.. | objects |
+                 select(((.Folder? // false) == false) and (.Default? == true))]
+                | .[0] // empty
+            ' "$PRESET_FILE" > "$selected_file"
             ;;
         gui-preset)
-            PRESET_NAME="$WATCH_HANDBRAKE_PRESET"
+            [[ -n "$WATCH_HANDBRAKE_PRESET" ]] || {
+                log "WATCH_HANDBRAKE_PRESET ist leer."
+                rm -f -- "$selected_file"
+                return 1
+            }
+            jq --arg name "$WATCH_HANDBRAKE_PRESET" '
+                ([.. | objects |
+                  select(((.Folder? // false) == false) and (.PresetName? == $name))]) as $m
+                | (([$m[] | select(.Default? == true)]) + $m)
+                | .[0] // empty
+            ' "$PRESET_FILE" > "$selected_file"
             ;;
         *)
+            rm -f -- "$selected_file"
             return 1
             ;;
     esac
 
+    if [[ ! -s "$selected_file" ]] || [[ "$(jq -r 'type' "$selected_file" 2>/dev/null || true)" != "object" ]]; then
+        log "Kein passendes GUI-Preset gefunden. Markiere das gewünschte Preset in HandBrake als Standard."
+        rm -f -- "$selected_file"
+        return 1
+    fi
+
+    PRESET_NAME="$(jq -r '.PresetName? // empty' "$selected_file")"
+    PRESET_ENCODER="$(jq -r '.VideoEncoder? // empty' "$selected_file")"
+    PRESET_FORMAT="$(jq -r '.FileFormat? // empty' "$selected_file")"
+    PRESET_PROFILE="$(jq -r '.VideoProfile? // empty' "$selected_file")"
+    PRESET_QUALITY="$(jq -r '.VideoQualitySlider? // empty' "$selected_file")"
+
     if [[ -z "$PRESET_NAME" ]]; then
-        log "Kein passendes GUI-Preset gefunden. Öffne HandBrake und markiere dein gewünschtes Preset als Standard."
+        log "Das ausgewählte Preset hat keinen PresetName."
+        rm -f -- "$selected_file"
         return 1
     fi
 
-    if ! jq -e --arg name "$PRESET_NAME" '.. | objects | select(((.Folder? // false) == false) and (.PresetName? == $name))' "$PRESET_FILE" >/dev/null; then
-        log "Preset '$PRESET_NAME' wurde in $PRESET_FILE nicht gefunden."
+    case "$PRESET_ENCODER" in
+        vaapi_*) ;;
+        *)
+            log "FEHLER: Ausgewähltes GUI-Preset verwendet keinen VA-API-Encoder: $PRESET_ENCODER"
+            log "Der Watcher startet keinen CPU-Encode. Quelle bleibt im Watch-Ordner."
+            rm -f -- "$selected_file"
+            return 1
+            ;;
+    esac
+
+    # HandBrakeCLI selects presets by name. If presets.json contains duplicate
+    # names, importing the complete GUI file can select the wrong preset. Build
+    # a temporary import file that preserves the GUI file version metadata but
+    # contains only the exact preset selected above.
+    if ! jq --slurpfile selected "$selected_file" '.PresetList = [$selected[0]]' "$PRESET_FILE" > "$filtered_file"; then
+        log "Temporäre Preset-Datei konnte nicht erstellt werden."
+        rm -f -- "$selected_file" "$filtered_file"
         return 1
     fi
+    rm -f -- "$selected_file"
 
-    PRESET_FORMAT="$(jq -r --arg name "$PRESET_NAME" '.. | objects | select(((.Folder? // false) == false) and (.PresetName? == $name)) | .FileFormat? // empty' "$PRESET_FILE" | head -n 1)"
     OUTPUT_EXTENSION="$(format_to_extension "$PRESET_FORMAT")"
-    PROFILE_ARGS=(--preset-import-file "$PRESET_FILE" --preset "$PRESET_NAME")
-    log "Verwende HandBrake-GUI-Preset: $PRESET_NAME ($PRESET_FILE)"
+    ACTIVE_PRESET_FILE="$filtered_file"
+    PROFILE_ARGS=(--preset-import-file "$ACTIVE_PRESET_FILE" --preset "$PRESET_NAME")
+
+    log "Verwende exaktes HandBrake-GUI-Preset: $PRESET_NAME"
+    log "VideoEncoder=$PRESET_ENCODER | Profil=${PRESET_PROFILE:-auto} | Qualität=${PRESET_QUALITY:-Preset} | Format=${PRESET_FORMAT:-auto}"
 }
 
 build_profile_args() {
     PROFILE_ARGS=()
+    ACTIVE_PRESET_FILE=""
     OUTPUT_EXTENSION="mkv"
 
     case "$WATCH_PROFILE" in
@@ -223,6 +271,7 @@ process_file() {
 
     if LIBVA_DRIVER_NAME="$LIBVA_DRIVER_NAME" VAAPI_DEVICE="$VAAPI_DEVICE" \
         HandBrakeCLI "${args[@]}"; then
+        rm -f -- "${ACTIVE_PRESET_FILE:-}"
         if [[ -s "$temp" ]]; then
             mv -- "$temp" "$final"
             archive_source "$source" "$DONE_DIR"
@@ -233,6 +282,7 @@ process_file() {
             archive_source "$source" "$ERROR_DIR"
         fi
     else
+        rm -f -- "${ACTIVE_PRESET_FILE:-}"
         log "Encode fehlgeschlagen: $source"
         rm -f -- "$temp"
         archive_source "$source" "$ERROR_DIR"
