@@ -1,6 +1,5 @@
 # syntax=docker/dockerfile:1.7
-# HandBrake GTK GUI for Unraid with browser VNC/noVNC and AMD Mesa VA-API.
-# Multi-stage build: compile in clean Ubuntu, keep runtime lean and predictable.
+# HandBrake GTK GUI for Unraid with browser VNC/noVNC, AMD Mesa VA-API and watch-folder automation.
 
 ARG HANDBRAKE_REF=master
 
@@ -10,71 +9,23 @@ ARG DEBIAN_FRONTEND=noninteractive
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    appstream \
-    autoconf \
-    automake \
-    build-essential \
-    ca-certificates \
-    cmake \
-    desktop-file-utils \
-    gettext \
-    git \
-    gstreamer1.0-libav \
-    gstreamer1.0-plugins-good \
-    libass-dev \
-    libbz2-dev \
-    libdrm-dev \
-    libfontconfig-dev \
-    libfreetype-dev \
-    libfribidi-dev \
-    libgstreamer-plugins-base1.0-dev \
-    libgtk-4-dev \
-    libharfbuzz-dev \
-    libjansson-dev \
-    liblzma-dev \
-    libmp3lame-dev \
-    libnuma-dev \
-    libogg-dev \
-    libopus-dev \
-    libsamplerate0-dev \
-    libspeex-dev \
-    libssl-dev \
-    libtheora-dev \
-    libtool \
-    libtool-bin \
-    libturbojpeg0-dev \
-    libva-dev \
-    libvorbis-dev \
-    libvpx-dev \
-    libx11-dev \
-    libx264-dev \
-    libxml2-dev \
-    m4 \
-    make \
-    meson \
-    nasm \
-    ninja-build \
-    patch \
-    pkg-config \
-    python3 \
-    tar \
-    xz-utils \
-    zlib1g-dev \
+    appstream autoconf automake build-essential ca-certificates cmake desktop-file-utils gettext git \
+    gstreamer1.0-libav gstreamer1.0-plugins-good libass-dev libbz2-dev libdrm-dev libfontconfig-dev \
+    libfreetype-dev libfribidi-dev libgstreamer-plugins-base1.0-dev libgtk-4-dev libharfbuzz-dev \
+    libjansson-dev liblzma-dev libmp3lame-dev libnuma-dev libogg-dev libopus-dev libsamplerate0-dev \
+    libspeex-dev libssl-dev libtheora-dev libtool libtool-bin libturbojpeg0-dev libva-dev libvorbis-dev \
+    libvpx-dev libx11-dev libx264-dev libxml2-dev m4 make meson nasm ninja-build patch pkg-config \
+    python3 tar xz-utils zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /tmp
-
 RUN mkdir -p /tmp/HandBrake \
     && cd /tmp/HandBrake \
     && git init \
     && git remote add origin https://github.com/HandBrake/HandBrake.git \
     && git fetch --depth 1 origin "${HANDBRAKE_REF}" \
     && git checkout --detach FETCH_HEAD \
-    && ./configure \
-         --prefix=/opt/handbrake \
-         --enable-vaapi \
-         --launch-jobs="$(nproc)" \
-         --launch \
+    && ./configure --prefix=/opt/handbrake --enable-vaapi --launch-jobs="$(nproc)" --launch \
     && make --directory=build install \
     && test -x /opt/handbrake/bin/HandBrakeCLI \
     && test -x /opt/handbrake/bin/ghb
@@ -83,53 +34,13 @@ FROM ubuntu:24.04 AS runtime
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    adwaita-icon-theme \
-    ca-certificates \
-    curl \
-    dbus-x11 \
-    desktop-file-utils \
-    fonts-dejavu-core \
-    gosu \
-    gsettings-desktop-schemas \
-    gstreamer1.0-libav \
-    gstreamer1.0-plugins-good \
-    hicolor-icon-theme \
-    libass9 \
-    libdrm-amdgpu1 \
-    libdrm2 \
-    libfontconfig1 \
-    libfreetype6 \
-    libfribidi0 \
-    libgstreamer-plugins-base1.0-0 \
-    libgtk-4-1 \
-    libgudev-1.0-0 \
-    libharfbuzz0b \
-    libjansson4 \
-    libmp3lame0 \
-    libnuma1 \
-    libogg0 \
-    libopus0 \
-    libsamplerate0 \
-    libspeex1 \
-    libtheora0 \
-    libturbojpeg \
-    libva-drm2 \
-    libva-x11-2 \
-    libva2 \
-    libvorbis0a \
-    libvpx9 \
-    libx11-6 \
-    libx264-164 \
-    libxml2 \
-    locales \
-    mesa-va-drivers \
-    novnc \
-    openbox \
-    shared-mime-info \
-    vainfo \
-    websockify \
-    x11vnc \
-    xvfb \
+    adwaita-icon-theme ca-certificates curl dbus-x11 desktop-file-utils fonts-dejavu-core gosu \
+    gsettings-desktop-schemas gstreamer1.0-libav gstreamer1.0-plugins-good hicolor-icon-theme \
+    libass9 libdrm-amdgpu1 libdrm2 libfontconfig1 libfreetype6 libfribidi0 \
+    libgstreamer-plugins-base1.0-0 libgtk-4-1 libgudev-1.0-0 libharfbuzz0b libjansson4 \
+    libmp3lame0 libnuma1 libogg0 libopus0 libsamplerate0 libspeex1 libtheora0 libturbojpeg \
+    libva-drm2 libva-x11-2 libva2 libvorbis0a libvpx9 libx11-6 libx264-164 libxml2 locales \
+    mesa-va-drivers novnc openbox shared-mime-info vainfo websockify x11vnc xvfb \
     && locale-gen de_DE.UTF-8 en_US.UTF-8 \
     && ln -sf /usr/share/novnc/vnc.html /usr/share/novnc/index.html \
     && groupadd --system app \
@@ -138,9 +49,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=builder /opt/handbrake /opt/handbrake
 COPY startapp.sh /startapp.sh
+COPY watch-folder.sh /watch-folder.sh
 
-RUN chmod +x /startapp.sh \
-    && mkdir -p /config /storage /output /watch \
+RUN chmod +x /startapp.sh /watch-folder.sh \
+    && mkdir -p /config /storage /output /watch /watch/done /watch/error /output/.handbrake-working \
     && ldd /opt/handbrake/bin/ghb | tee /tmp/ghb-ldd.txt \
     && ! grep -q 'not found' /tmp/ghb-ldd.txt \
     && /opt/handbrake/bin/HandBrakeCLI --version
@@ -163,7 +75,13 @@ ENV PATH="/opt/handbrake/bin:${PATH}" \
     GROUP_ID="100" \
     UMASK="0022" \
     KEEP_APP_RUNNING="1" \
-    VNC_PASSWORD=""
+    VNC_PASSWORD="" \
+    WATCH_ENABLED="1" \
+    WATCH_PROFILE="rx6700-hevc10" \
+    WATCH_QUALITY="24" \
+    WATCH_POLL_SECONDS="5" \
+    WATCH_SETTLE_SECONDS="3" \
+    WATCH_HANDBRAKE_PRESET="Fast 1080p30"
 
 VOLUME ["/config", "/storage", "/output", "/watch"]
 EXPOSE 5800 5900
@@ -175,6 +93,6 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
 ENTRYPOINT ["/startapp.sh"]
 
 LABEL org.opencontainers.image.title="HandBrake AMD GUI for Unraid" \
-      org.opencontainers.image.description="HandBrake GTK over noVNC/VNC with AMD Mesa VA-API support for Unraid" \
+      org.opencontainers.image.description="HandBrake GTK over noVNC/VNC with AMD Mesa VA-API and automatic watch-folder encoding" \
       org.opencontainers.image.source="https://github.com/h3xx3r/handbrake-amd-unraid" \
       org.opencontainers.image.licenses="MIT"

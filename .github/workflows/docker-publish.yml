@@ -6,6 +6,7 @@ on:
     paths:
       - Dockerfile
       - startapp.sh
+      - watch-folder.sh
       - rootfs/**
       - .github/workflows/docker-publish.yml
   workflow_dispatch:

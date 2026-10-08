@@ -11,7 +11,7 @@ services:
       - /dev/dri:/dev/dri
     ports:
       - "${WEB_PORT:-5800}:5800"
-      - "${VNC_PORT:-5900}:5900"
+      - "${VNC_PORT:-5901}:5900"
     environment:
       TZ: "${TZ:-Europe/Berlin}"
       LANG: "${LANG:-de_DE.UTF-8}"
@@ -24,6 +24,12 @@ services:
       DISPLAY_WIDTH: "${DISPLAY_WIDTH:-1920}"
       DISPLAY_HEIGHT: "${DISPLAY_HEIGHT:-1080}"
       KEEP_APP_RUNNING: "1"
+      WATCH_ENABLED: "${WATCH_ENABLED:-1}"
+      WATCH_PROFILE: "${WATCH_PROFILE:-rx6700-hevc10}"
+      WATCH_QUALITY: "${WATCH_QUALITY:-24}"
+      WATCH_HANDBRAKE_PRESET: "${WATCH_HANDBRAKE_PRESET:-Fast 1080p30}"
+      WATCH_POLL_SECONDS: "${WATCH_POLL_SECONDS:-5}"
+      WATCH_SETTLE_SECONDS: "${WATCH_SETTLE_SECONDS:-3}"
     volumes:
       - "${CONFIG_PATH:-/mnt/user/appdata/handbrake-amd}:/config"
       - "${STORAGE_PATH:-/mnt/user}:/storage"

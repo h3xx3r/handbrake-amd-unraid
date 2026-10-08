@@ -1,31 +1,25 @@
 # HandBrake AMD GUI for Unraid
 
-HandBrake mit vollständiger GTK-Oberfläche im Browser/VNC und AMD-GPU-
-Hardware-Encoding über Mesa VA-API. Das Projekt ist für **Unraid 7.x** und
-insbesondere auch für **AMD Radeon RX 6700 / RDNA2** ausgelegt.
+HandBrake mit GTK-Oberfläche im Browser/VNC, AMD-GPU-Hardware-Encoding über Mesa VA-API und automatischem Watch-Folder. Ausgelegt für **Unraid 7.x** und insbesondere **AMD Radeon RX 6700 / RDNA2**.
 
 ## Features
 
-- HandBrake GTK GUI
-- Browser-GUI über noVNC auf Port `5800`
-- optionaler direkter VNC-Zugriff auf Port `5900`
+- HandBrake GTK GUI im Browser über noVNC (`5800`)
+- optionaler direkter VNC-Zugriff, standardmäßig Host `5901` -> Container `5900`
 - AMD-GPU-Passthrough über `/dev/dri`
 - Mesa `radeonsi` + VA-API
-- keine Installation eines proprietären AMD-Treibers auf Unraid nötig
-- automatische Erkennung der `/dev/dri`-Gruppenrechte
-- persistente HandBrake-Konfiguration unter `/config`
-- Quell-, Ausgabe- und Watch-Verzeichnisse
-- Unraid XML Template
+- automatische `/dev/dri`-Gruppenrechte
+- persistente Konfiguration unter `/config`
+- automatischer Watch-Folder mit nur einem Encode gleichzeitig
+- Erfolg nach `/watch/done`, Fehler nach `/watch/error`
+- Ausgabe nach `/output`
+- RX-6700-Standardprofil: **H.265/HEVC VAAPI Main10**, Qualität `24`
+- Unraid XML Template und editierbare DockerMan-Konfiguration
 - Docker Compose
-- automatischer GitHub-Actions-Build nach GHCR
-- Installationsskript für Unraid
+- GitHub Actions -> GHCR
 - deutsche Locale und `Europe/Berlin` als Defaults
 
 ## Schnellinstallation auf Unraid
-
-### Installationsskript (empfohlen)
-
-Auf dem Unraid-Terminal:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/h3xx3r/handbrake-amd-unraid/main/scripts/install-unraid.sh \
@@ -33,181 +27,150 @@ curl -fsSL https://raw.githubusercontent.com/h3xx3r/handbrake-amd-unraid/main/sc
 bash /tmp/install-handbrake-amd.sh
 ```
 
-Das Skript prüft Docker und `/dev/dri`, erkennt standardmäßig `renderD128`,
-lädt das fertige GHCR-Image, legt die persistenten Verzeichnisse an und
-startet den Container mit den passenden AMD-VAAPI-Defaults.
+Der Installer prüft Docker und `/dev/dri`, zieht `ghcr.io/h3xx3r/handbrake-amd-unraid:latest`, legt die persistenten Verzeichnisse an, startet den Container und erzeugt unter Unraid ein User-Template. Dadurch bleibt der Container anschließend über **Docker -> Bearbeiten** verwaltbar.
 
-Eigene Pfade oder Ports können direkt als Umgebungsvariablen gesetzt werden:
-
-```bash
-OUTPUT_PATH=/mnt/user/Filme/HandBrake \
-WEB_PORT=5801 \
-VNC_PASSWORD='mein-passwort' \
-bash /tmp/install-handbrake-amd.sh
-```
-
-Nach erfolgreicher Installation ist die GUI standardmäßig erreichbar unter:
+Web-GUI:
 
 ```text
 http://UNRAID-IP:5800
 ```
 
-### Manuelle Installation
-
-Nach dem ersten erfolgreichen GHCR-Build lautet das Image:
+VNC standardmäßig:
 
 ```text
-ghcr.io/h3xx3r/handbrake-amd-unraid:latest
+UNRAID-IP:5901
 ```
 
-Wichtige Einstellung:
+## Automatischer Watch-Folder
+
+Standardmäßig ist der Watcher aktiviert. Lege eine Videodatei direkt in:
 
 ```text
-Device: /dev/dri -> /dev/dri
+/mnt/user/Media/HandBrake/watch
 ```
 
-Standardwerte für AMD:
+Der Container wartet, bis sich die Dateigröße nicht mehr ändert, und startet dann automatisch HandBrakeCLI. Es läuft immer nur **eine Datei gleichzeitig**.
+
+Standardprofil:
 
 ```text
-LIBVA_DRIVER_NAME=radeonsi
-VAAPI_DEVICE=/dev/dri/renderD128
+WATCH_PROFILE=rx6700-hevc10
+WATCH_QUALITY=24
 ```
 
-Die vollständige Schritt-für-Schritt-Anleitung steht unter:
+Das verwendet `vaapi_hevc` mit HEVC Main10 auf der RX 6700. Nach Erfolg wird die Quelle nach `watch/done` verschoben; bei einem Fehler nach `watch/error`. Die fertige MKV-Datei landet unter `/output`.
 
-- [`docs/INSTALL_UNRAID.md`](docs/INSTALL_UNRAID.md)
-- [`docs/RX6700.md`](docs/RX6700.md)
+Unterstützte Profile:
 
-## Warum der HandBrake-Entwicklungszweig?
+```text
+rx6700-hevc10    H.265/HEVC VAAPI Main10 (Standard)
+rx6700-hevc      H.265/HEVC VAAPI Main
+rx6700-h264      H.264 VAAPI High
+handbrake-preset eingebautes HandBrake-Preset verwenden
+```
 
-Die stabile HandBrake-Version 1.11.2 unterstützt AMD VCN unter Linux über
-AMF. Für RDNA2 benötigen die offiziellen HandBrake-Hinweise dabei ältere
-`amf-amdgpu-pro`-Bibliotheken. AMD liefert AMF seit Radeon Software for Linux
-25.20 nicht mehr aus und empfiehlt VA-API / Mesa Multimedia als Nachfolger.
+Für ein eingebautes HandBrake-Preset:
 
-HandBrake entwickelt deshalb einen nativen VA-API-Pfad; die entsprechenden
-Änderungen befinden sich aktuell im Entwicklungszweig und sind für 1.12
-vorgesehen. Dieses Image baut standardmäßig `master` mit:
+```text
+WATCH_PROFILE=handbrake-preset
+WATCH_HANDBRAKE_PRESET=Fast 1080p30
+```
+
+Watcher deaktivieren:
+
+```text
+WATCH_ENABLED=0
+```
+
+Unterstützt werden u. a. MKV, MP4/M4V, MOV, AVI, MPG/MPEG, TS/MTS/M2TS, WEBM, WMV und FLV.
+
+## Wichtige Unraid-Einstellungen
+
+```text
+Device             /dev/dri -> /dev/dri
+LIBVA_DRIVER_NAME  radeonsi
+VAAPI_DEVICE       /dev/dri/renderD128
+WebUI Host-Port    5800
+VNC Host-Port      5901
+```
+
+Bei einer zweiten GPU kann `VAAPI_DEVICE` z. B. `/dev/dri/renderD129` sein.
+
+## Installationsskript konfigurieren
+
+Beispiel:
+
+```bash
+OUTPUT_PATH=/mnt/user/Filme/HandBrake \
+WATCH_PATH=/mnt/user/Filme/HandBrake/watch \
+WATCH_PROFILE=rx6700-h264 \
+VNC_PORT=5902 \
+bash /tmp/install-handbrake-amd.sh
+```
+
+Weitere Variablen stehen in [`.env.example`](.env.example).
+
+## GPU prüfen
+
+```bash
+docker exec -it HandBrake-AMD-GUI sh -lc \
+  'vainfo --display drm --device "$VAAPI_DEVICE"'
+```
+
+HandBrake VA-API prüfen:
+
+```bash
+docker exec -it HandBrake-AMD-GUI sh -lc \
+  'HandBrakeCLI --help | grep -i -E "vaapi|va-api"'
+```
+
+## RX 6700
+
+Die RX 6700 kann über Mesa/VA-API H.264 und HEVC/H.265 hardwarebeschleunigt encodieren. AV1 wird von dieser Generation hardwarebeschleunigt decodiert, aber nicht encodiert.
+
+## HandBrake-Zweig
+
+Die aktuelle stabile HandBrake-Version ist 1.11.2. Der native VA-API-Pfad befindet sich im Entwicklungszweig; deshalb baut dieses Image standardmäßig `master` mit:
 
 ```text
 --enable-vaapi
 ```
 
-Das ist für einen Unraid-Container deutlich sauberer: Der Host stellt nur
-`/dev/dri` bereit, während Mesa/libva im Container liegen.
+Der Host stellt nur `/dev/dri` bereit; Mesa/libva liegen im Container.
 
-> Hinweis: Da dieser VA-API-Pfad noch Entwicklungsstand ist, kann es mit
-> einzelnen Kombinationen aus HandBrake, Mesa, Codec und Containerformat
-> noch Probleme geben. Bei Problemen mit MP4 zunächst MKV testen.
+## Dokumentation
 
-## RX 6700
-
-Für die RX 6700 sind H.264 und H.265/HEVC die relevanten Hardware-Encoder.
-Die Karte besitzt kein AV1-Hardware-Encoding.
-
-Empfehlung:
-
-- H.264 VAAPI: maximale Abspiel-Kompatibilität
-- H.265/HEVC VAAPI: bessere Kompression
-- H.265 10-bit: verwenden, wenn im aktuellen Build angeboten
-
-## Installationsskript konfigurieren
-
-Das Skript `scripts/install-unraid.sh` unterstützt unter anderem:
-
-```text
-IMAGE            ghcr.io/h3xx3r/handbrake-amd-unraid:latest
-CONTAINER_NAME   HandBrake-AMD-GUI
-CONFIG_PATH      /mnt/user/appdata/handbrake-amd
-STORAGE_PATH     /mnt/user
-OUTPUT_PATH      /mnt/user/Media/HandBrake
-WATCH_PATH       /mnt/user/Media/HandBrake/watch
-WEB_PORT         5800
-VNC_PORT         5900
-VAAPI_DEVICE     automatisch /dev/dri/renderD128
-LIBVA_DRIVER_NAME radeonsi
-VNC_PASSWORD     leer
-TZ               Europe/Berlin
-USER_ID          99
-GROUP_ID         100
-UMASK            0022
-```
-
-Beispiel bei einer zweiten GPU:
-
-```bash
-VAAPI_DEVICE=/dev/dri/renderD129 bash /tmp/install-handbrake-amd.sh
-```
-
-Das Skript kann erneut ausgeführt werden, um den vorhandenen Container durch
-das aktuell gepullte Image zu ersetzen. Die Daten unter `/config` und den
-gemounteten Medienpfaden bleiben erhalten.
+- [`docs/INSTALL_UNRAID.md`](docs/INSTALL_UNRAID.md)
+- [`docs/RX6700.md`](docs/RX6700.md)
 
 ## Image lokal bauen
 
 ```bash
 git clone https://github.com/h3xx3r/handbrake-amd-unraid.git
 cd handbrake-amd-unraid
-chmod +x scripts/*.sh startapp.sh rootfs/etc/cont-env.d/SUP_GROUP_IDS_INTERNAL_GPU
 ./scripts/build-unraid.sh
 ```
 
-Alternativ:
+Oder:
 
 ```bash
 cp .env.example .env
 docker compose up -d --build
 ```
 
-## Einen bestimmten HandBrake-Stand bauen
-
-Branch:
-
-```bash
-HANDBRAKE_REF=master ./scripts/build-unraid.sh
-```
-
-Tag oder Commit:
-
-```bash
-HANDBRAKE_REF=<tag-oder-commit> ./scripts/build-unraid.sh
-```
-
-## GPU prüfen
-
-```bash
-./scripts/test-amd-vaapi.sh
-```
-
-oder:
-
-```bash
-docker exec -it HandBrake-AMD-GUI sh
-vainfo --display drm --device /dev/dri/renderD128
-HandBrakeCLI --help | grep -i -E 'vaapi|va-api'
-```
-
 ## GitHub Container Registry
-
-Der Workflow `.github/workflows/docker-publish.yml` baut bei Änderungen am
-Docker-Stack automatisch:
 
 ```text
 ghcr.io/h3xx3r/handbrake-amd-unraid:latest
 ```
 
-Neue GHCR-Pakete sind zunächst privat. Nach dem ersten Build muss das Paket
-in GitHub einmalig auf **Public** gestellt werden, damit Unraid ohne Login
-pullen kann. Details: [`docs/INSTALL_UNRAID.md`](docs/INSTALL_UNRAID.md).
+Das GHCR-Paket muss öffentlich sein, wenn Unraid ohne GitHub-Login pullen soll.
 
 ## Upstream
 
 - HandBrake: https://github.com/HandBrake/HandBrake
 - HandBrake Dokumentation: https://handbrake.fr/docs/
-- jlesage baseimage-gui: https://github.com/jlesage/docker-baseimage-gui
 
 ## Lizenz
 
-Die Dateien dieses Repositories stehen unter der MIT-Lizenz. HandBrake,
-Mesa, jlesage/baseimage-gui und weitere enthaltene Komponenten behalten ihre
-jeweiligen eigenen Lizenzen.
+Die Dateien dieses Repositories stehen unter der MIT-Lizenz. Enthaltene Komponenten behalten ihre jeweiligen Lizenzen.
