@@ -99,7 +99,7 @@ format_to_extension() {
 }
 
 resolve_gui_preset() {
-    local selected_file filtered_file
+    local selected_file filtered_file internal_name
 
     PRESET_FILE="$(find_gui_preset_file || true)"
     if [[ -z "$PRESET_FILE" ]]; then
@@ -170,28 +170,42 @@ resolve_gui_preset() {
             ;;
     esac
 
-    # HandBrakeCLI selects presets by name. If presets.json contains duplicate
-    # names, importing the complete GUI file can select the wrong preset. Build
-    # a temporary import file that preserves the GUI file version metadata but
-    # contains only the exact preset selected above.
-    if ! jq --slurpfile selected "$selected_file" '.PresetList = [$selected[0]]' "$PRESET_FILE" > "$filtered_file"; then
+    # HandBrakeCLI also loads the normal GUI/user presets from XDG_CONFIG_HOME.
+    # If two GUI presets have the same name, selecting by the original name can
+    # still resolve to the wrong (e.g. CPU/x265) preset even after filtering.
+    # Rename the selected preset to a unique internal name before importing it.
+    internal_name="__HB_AMD_WATCH_${$}_${RANDOM}__"
+
+    if ! jq --arg internal "$internal_name" --slurpfile selected "$selected_file" '
+        .PresetList = [($selected[0] | .PresetName = $internal | .Default = false)]
+    ' "$PRESET_FILE" > "$filtered_file"; then
         log "Temporäre Preset-Datei konnte nicht erstellt werden."
         rm -f -- "$selected_file" "$filtered_file"
         return 1
     fi
     rm -f -- "$selected_file"
 
+    # Verify the generated temporary preset before launching HandBrakeCLI.
+    if [[ "$(jq -r --arg internal "$internal_name" '.. | objects | select(.PresetName? == $internal) | .VideoEncoder? // empty' "$filtered_file" | head -n 1)" != "$PRESET_ENCODER" ]]; then
+        log "FEHLER: Temporäres Preset enthält nicht den erwarteten Encoder $PRESET_ENCODER."
+        rm -f -- "$filtered_file"
+        return 1
+    fi
+
     OUTPUT_EXTENSION="$(format_to_extension "$PRESET_FORMAT")"
     ACTIVE_PRESET_FILE="$filtered_file"
-    PROFILE_ARGS=(--preset-import-file "$ACTIVE_PRESET_FILE" --preset "$PRESET_NAME")
+    ACTIVE_PRESET_NAME="$internal_name"
+    PROFILE_ARGS=(--preset-import-file "$ACTIVE_PRESET_FILE" --preset "$ACTIVE_PRESET_NAME")
 
     log "Verwende exaktes HandBrake-GUI-Preset: $PRESET_NAME"
     log "VideoEncoder=$PRESET_ENCODER | Profil=${PRESET_PROFILE:-auto} | Qualität=${PRESET_QUALITY:-Preset} | Format=${PRESET_FORMAT:-auto}"
+    log "Interner Watch-Presetname: $ACTIVE_PRESET_NAME"
 }
 
 build_profile_args() {
     PROFILE_ARGS=()
     ACTIVE_PRESET_FILE=""
+    ACTIVE_PRESET_NAME=""
     OUTPUT_EXTENSION="mkv"
 
     case "$WATCH_PROFILE" in
