@@ -87,6 +87,28 @@ build_profile_args() {
     esac
 }
 
+check_vaapi_device() {
+    if [[ "$WATCH_PROFILE" == "handbrake-preset" ]]; then
+        return 0
+    fi
+
+    if [[ ! -e "$VAAPI_DEVICE" ]]; then
+        log "WARNUNG: VAAPI_DEVICE existiert nicht: $VAAPI_DEVICE"
+        log "Der Watcher bleibt aktiv; der Encode wird bei einem Job fehlschlagen und die Quelle nach /watch/error verschieben."
+        return 0
+    fi
+
+    # HandBrakeCLI --help lists option syntax, not the dynamically available
+    # encoder names. Do not use it to detect vaapi_hevc/vaapi_h264.
+    # Probe libva instead; the actual HandBrake encoder is validated by the job.
+    if vainfo --display drm --device "$VAAPI_DEVICE" 2>&1 | grep -q 'VAEntrypointEncSlice'; then
+        log "VA-API Hardware-Encoding am Gerät erkannt: $VAAPI_DEVICE"
+    else
+        log "WARNUNG: vainfo meldet keinen VAEntrypointEncSlice für $VAAPI_DEVICE"
+        log "Der Watcher bleibt aktiv; HandBrake prüft den gewählten Encoder beim ersten Job."
+    fi
+}
+
 process_file() {
     local source="$1"
     local base stem final temp
@@ -147,13 +169,7 @@ process_file() {
 }
 
 mkdir -p "$WATCH_DIR" "$OUTPUT_DIR" "$DONE_DIR" "$ERROR_DIR" "$WORK_DIR"
-
-if [[ "$WATCH_PROFILE" != "handbrake-preset" ]]; then
-    if ! HandBrakeCLI --help 2>&1 | grep -qE 'vaapi_(hevc|h264)'; then
-        log "VA-API-Encoder sind in diesem HandBrakeCLI-Build nicht sichtbar. Watcher wird beendet."
-        exit 2
-    fi
-fi
+check_vaapi_device
 
 log "Watcher aktiv: $WATCH_DIR"
 log "Standardprofil: $WATCH_PROFILE"
