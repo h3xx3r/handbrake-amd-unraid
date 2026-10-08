@@ -34,7 +34,7 @@ FROM ubuntu:24.04 AS runtime
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    adwaita-icon-theme ca-certificates curl dbus-x11 desktop-file-utils fonts-dejavu-core gosu \
+    adwaita-icon-theme ca-certificates curl dbus-x11 desktop-file-utils fonts-dejavu-core gosu jq \
     gsettings-desktop-schemas gstreamer1.0-libav gstreamer1.0-plugins-good hicolor-icon-theme \
     libass9 libdrm-amdgpu1 libdrm2 libfontconfig1 libfreetype6 libfribidi0 \
     libgstreamer-plugins-base1.0-0 libgtk-4-1 libgudev-1.0-0 libharfbuzz0b libjansson4 \
@@ -77,11 +77,11 @@ ENV PATH="/opt/handbrake/bin:${PATH}" \
     KEEP_APP_RUNNING="1" \
     VNC_PASSWORD="" \
     WATCH_ENABLED="1" \
-    WATCH_PROFILE="rx6700-hevc10" \
+    WATCH_PROFILE="gui-default" \
     WATCH_QUALITY="24" \
     WATCH_POLL_SECONDS="5" \
     WATCH_SETTLE_SECONDS="3" \
-    WATCH_HANDBRAKE_PRESET="Fast 1080p30"
+    WATCH_HANDBRAKE_PRESET=""
 
 VOLUME ["/config", "/storage", "/output", "/watch"]
 EXPOSE 5800 5900

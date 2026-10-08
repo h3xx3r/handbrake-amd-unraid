@@ -9,7 +9,7 @@
   <Privileged>false</Privileged>
   <Support>https://github.com/h3xx3r/handbrake-amd-unraid/issues</Support>
   <Project>https://github.com/h3xx3r/handbrake-amd-unraid</Project>
-  <Overview>HandBrake GTK im Browser/VNC mit AMD Mesa VA-API und automatischem Watch-Folder. Für Unraid 7.x und Radeon RX 6700/RDNA2.</Overview>
+  <Overview>HandBrake GTK im Browser/VNC mit AMD Mesa VA-API und automatischem Watch-Folder. Der Watcher kann das in der HandBrake-GUI als Standard markierte Preset direkt übernehmen.</Overview>
   <Category>MediaApp:Video</Category>
   <WebUI>http://[IP]:[PORT:5800]/</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/h3xx3r/handbrake-amd-unraid/main/unraid-template.xml</TemplateURL>
@@ -20,18 +20,16 @@
 
   <Config Name="Web GUI" Target="5800" Default="5800" Mode="tcp" Description="Browser GUI / noVNC" Type="Port" Display="always" Required="true" Mask="false">5800</Config>
   <Config Name="VNC" Target="5900" Default="5901" Mode="tcp" Description="Direkter VNC-Zugriff; Host-Port 5901 wird auf Container-Port 5900 abgebildet" Type="Port" Display="always" Required="false" Mask="false">5901</Config>
-
   <Config Name="AMD GPU" Target="/dev/dri" Default="/dev/dri" Mode="" Description="AMD DRM/VA-API Gerät" Type="Device" Display="always" Required="true" Mask="false">/dev/dri</Config>
-
-  <Config Name="Config" Target="/config" Default="/mnt/user/appdata/handbrake-amd" Mode="rw" Description="Persistente HandBrake Einstellungen" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/handbrake-amd</Config>
+  <Config Name="Config" Target="/config" Default="/mnt/user/appdata/handbrake-amd" Mode="rw" Description="Persistente HandBrake Einstellungen und GUI-Presets" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/handbrake-amd</Config>
   <Config Name="Storage" Target="/storage" Default="/mnt/user" Mode="rw" Description="Quellmedien" Type="Path" Display="always" Required="true" Mask="false">/mnt/user</Config>
   <Config Name="Output" Target="/output" Default="/mnt/user/Media/HandBrake" Mode="rw" Description="Ausgabeordner des Watchers und für manuelle Encodes" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/Media/HandBrake</Config>
   <Config Name="Watch" Target="/watch" Default="/mnt/user/Media/HandBrake/watch" Mode="rw" Description="Dateien hier werden automatisch verarbeitet" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/Media/HandBrake/watch</Config>
 
   <Config Name="Watch Enabled" Target="WATCH_ENABLED" Default="1" Mode="" Description="1 = automatische Verarbeitung des Watch-Ordners, 0 = deaktiviert" Type="Variable" Display="always" Required="true" Mask="false">1</Config>
-  <Config Name="Watch Profile" Target="WATCH_PROFILE" Default="rx6700-hevc10" Mode="" Description="rx6700-hevc10, rx6700-hevc, rx6700-h264 oder handbrake-preset" Type="Variable" Display="always" Required="true" Mask="false">rx6700-hevc10</Config>
-  <Config Name="Watch Quality" Target="WATCH_QUALITY" Default="24" Mode="" Description="HandBrake Qualitätswert für die RX6700-VAAPI-Profile" Type="Variable" Display="always" Required="true" Mask="false">24</Config>
-  <Config Name="HandBrake Preset" Target="WATCH_HANDBRAKE_PRESET" Default="Fast 1080p30" Mode="" Description="Nur verwendet wenn WATCH_PROFILE=handbrake-preset" Type="Variable" Display="advanced" Required="false" Mask="false">Fast 1080p30</Config>
+  <Config Name="Watch Profile" Target="WATCH_PROFILE" Default="gui-default" Mode="" Description="gui-default = Standard-Preset aus der HandBrake-GUI; gui-preset = benannter GUI-Preset; alternativ rx6700-hevc, rx6700-hevc10, rx6700-h264 oder handbrake-preset" Type="Variable" Display="always" Required="true" Mask="false">gui-default</Config>
+  <Config Name="HandBrake Preset" Target="WATCH_HANDBRAKE_PRESET" Default="" Mode="" Description="Nur für gui-preset oder handbrake-preset: exakter Preset-Name" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Watch Quality" Target="WATCH_QUALITY" Default="24" Mode="" Description="Nur für die manuellen rx6700-* Profile" Type="Variable" Display="advanced" Required="false" Mask="false">24</Config>
   <Config Name="Watch Poll Seconds" Target="WATCH_POLL_SECONDS" Default="5" Mode="" Description="Abstand zwischen Scans des Watch-Ordners" Type="Variable" Display="advanced" Required="false" Mask="false">5</Config>
   <Config Name="Watch Settle Seconds" Target="WATCH_SETTLE_SECONDS" Default="3" Mode="" Description="Wartezeit zur Prüfung, ob eine kopierte Datei vollständig ist" Type="Variable" Display="advanced" Required="false" Mask="false">3</Config>
 
@@ -40,10 +38,8 @@
   <Config Name="User ID" Target="USER_ID" Default="99" Mode="" Description="Unraid nobody UID" Type="Variable" Display="advanced" Required="true" Mask="false">99</Config>
   <Config Name="Group ID" Target="GROUP_ID" Default="100" Mode="" Description="Unraid users GID" Type="Variable" Display="advanced" Required="true" Mask="false">100</Config>
   <Config Name="UMASK" Target="UMASK" Default="0022" Mode="" Description="Dateirechte" Type="Variable" Display="advanced" Required="false" Mask="false">0022</Config>
-
   <Config Name="VAAPI Driver" Target="LIBVA_DRIVER_NAME" Default="radeonsi" Mode="" Description="Mesa AMD VA-API Treiber" Type="Variable" Display="always" Required="true" Mask="false">radeonsi</Config>
   <Config Name="VAAPI Device" Target="VAAPI_DEVICE" Default="/dev/dri/renderD128" Mode="" Description="Render-Node der AMD GPU" Type="Variable" Display="always" Required="true" Mask="false">/dev/dri/renderD128</Config>
-
   <Config Name="VNC Password" Target="VNC_PASSWORD" Default="" Mode="" Description="Optionales VNC/Browser Passwort" Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
   <Config Name="Display Width" Target="DISPLAY_WIDTH" Default="1920" Mode="" Description="Breite der Browser/VNC-GUI" Type="Variable" Display="advanced" Required="false" Mask="false">1920</Config>
   <Config Name="Display Height" Target="DISPLAY_HEIGHT" Default="1080" Mode="" Description="Hoehe der Browser/VNC-GUI" Type="Variable" Display="advanced" Required="false" Mask="false">1080</Config>

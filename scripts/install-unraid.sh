@@ -16,9 +16,9 @@ UMASK="${UMASK:-0022}"
 LIBVA_DRIVER_NAME="${LIBVA_DRIVER_NAME:-radeonsi}"
 VNC_PASSWORD="${VNC_PASSWORD:-}"
 WATCH_ENABLED="${WATCH_ENABLED:-1}"
-WATCH_PROFILE="${WATCH_PROFILE:-rx6700-hevc10}"
+WATCH_PROFILE="${WATCH_PROFILE:-gui-default}"
 WATCH_QUALITY="${WATCH_QUALITY:-24}"
-WATCH_HANDBRAKE_PRESET="${WATCH_HANDBRAKE_PRESET:-Fast 1080p30}"
+WATCH_HANDBRAKE_PRESET="${WATCH_HANDBRAKE_PRESET:-}"
 WATCH_POLL_SECONDS="${WATCH_POLL_SECONDS:-5}"
 WATCH_SETTLE_SECONDS="${WATCH_SETTLE_SECONDS:-3}"
 
@@ -119,7 +119,7 @@ if [[ -d "$TEMPLATE_DIR" ]]; then
   <Privileged>false</Privileged>
   <Support>https://github.com/h3xx3r/handbrake-amd-unraid/issues</Support>
   <Project>https://github.com/h3xx3r/handbrake-amd-unraid</Project>
-  <Overview>HandBrake GTK mit AMD VA-API und automatischem Watch-Folder.</Overview>
+  <Overview>HandBrake GTK mit AMD VA-API und automatischem Watch-Folder. Standardmäßig wird das in der GUI als Default markierte Preset verwendet.</Overview>
   <Category>MediaApp:Video</Category>
   <WebUI>http://[IP]:[PORT:5800]/</WebUI>
   <Icon>https://handbrake.fr/img/logo.png</Icon>
@@ -131,9 +131,9 @@ if [[ -d "$TEMPLATE_DIR" ]]; then
   <Config Name="Output" Target="/output" Default="/mnt/user/Media/HandBrake" Mode="rw" Type="Path" Display="always" Required="true" Mask="false">$x_output</Config>
   <Config Name="Watch" Target="/watch" Default="/mnt/user/Media/HandBrake/watch" Mode="rw" Type="Path" Display="always" Required="true" Mask="false">$x_watch</Config>
   <Config Name="Watch Enabled" Target="WATCH_ENABLED" Default="1" Mode="" Type="Variable" Display="always" Required="true" Mask="false">$WATCH_ENABLED</Config>
-  <Config Name="Watch Profile" Target="WATCH_PROFILE" Default="rx6700-hevc10" Mode="" Type="Variable" Display="always" Required="true" Mask="false">$WATCH_PROFILE</Config>
-  <Config Name="Watch Quality" Target="WATCH_QUALITY" Default="24" Mode="" Type="Variable" Display="always" Required="true" Mask="false">$WATCH_QUALITY</Config>
-  <Config Name="HandBrake Preset" Target="WATCH_HANDBRAKE_PRESET" Default="Fast 1080p30" Mode="" Type="Variable" Display="advanced" Required="false" Mask="false">$x_preset</Config>
+  <Config Name="Watch Profile" Target="WATCH_PROFILE" Default="gui-default" Mode="" Type="Variable" Display="always" Required="true" Mask="false">$WATCH_PROFILE</Config>
+  <Config Name="HandBrake Preset" Target="WATCH_HANDBRAKE_PRESET" Default="" Mode="" Type="Variable" Display="advanced" Required="false" Mask="false">$x_preset</Config>
+  <Config Name="Watch Quality" Target="WATCH_QUALITY" Default="24" Mode="" Type="Variable" Display="advanced" Required="false" Mask="false">$WATCH_QUALITY</Config>
   <Config Name="Watch Poll Seconds" Target="WATCH_POLL_SECONDS" Default="5" Mode="" Type="Variable" Display="advanced" Required="false" Mask="false">$WATCH_POLL_SECONDS</Config>
   <Config Name="Watch Settle Seconds" Target="WATCH_SETTLE_SECONDS" Default="3" Mode="" Type="Variable" Display="advanced" Required="false" Mask="false">$WATCH_SETTLE_SECONDS</Config>
   <Config Name="Timezone" Target="TZ" Default="Europe/Berlin" Mode="" Type="Variable" Display="always" Required="true" Mask="false">$TZ</Config>
@@ -156,6 +156,6 @@ printf 'Container : %s\n' "$CONTAINER_NAME"
 printf 'Web-GUI   : http://%s:%s\n' "$HOST_IP" "$WEB_PORT"
 printf 'VNC       : %s:%s -> Container 5900\n' "$HOST_IP" "$VNC_PORT"
 printf 'GPU       : %s\n' "$VAAPI_DEVICE"
-printf 'Watch     : %s (Profil %s)\n' "$WATCH_PATH" "$WATCH_PROFILE"
+printf 'Watch     : %s (Profilmodus %s)\n' "$WATCH_PATH" "$WATCH_PROFILE"
 printf 'Output    : %s\n' "$OUTPUT_PATH"
 printf '\nLogs anzeigen mit:\n  docker logs -f %s\n' "$CONTAINER_NAME"
